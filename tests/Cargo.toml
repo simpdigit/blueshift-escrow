@@ -1,0 +1,15 @@
+[package]
+name = "blueshift_escrow_tests"
+edition = "2021"
+publish = false
+
+[lib]
+path = "lib.rs"
+
+[dev-dependencies]
+blueshift_escrow = { path = "../src" }
+mollusk-svm = { version = "=0.5.1", features = ["all-builtins"] }
+solana-account = "2.2.1"
+solana-instruction = "2.2.1"
+solana-pubkey = "2.2.1"
+solana-system-program = "2.2.1"
