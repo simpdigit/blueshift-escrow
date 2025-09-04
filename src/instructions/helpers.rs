@@ -1,5 +1,6 @@
 use pinocchio::{account_info::AccountInfo, instruction::{Seed, Signer}, program_error::ProgramError, pubkey::find_program_address, sysvars::{rent::Rent, Sysvar}, ProgramResult};
 use pinocchio_associated_token_account::instructions::Create;
+use pinocchio_log::log;
 use pinocchio_system::instructions::CreateAccount;
 //use pinocchio_token::state::TokenAccount;
 use crate::errors::PinocchioError;
@@ -27,6 +28,7 @@ impl AccountCheck for SignerAccount {
         if !account.is_signer() {
             return Err(PinocchioError::NotSigner.into());
         }
+        log!("Signer check passed");
         Ok(())
     }
 }
@@ -83,7 +85,7 @@ impl AccountCheck for MintInterface {
                 }
             }
         }
- 
+        log!("Mint check passed");
         Ok(())
     }
 }
@@ -159,6 +161,7 @@ impl ProgramAccountInit for ProgramAccount {
         // Create signer with seeds slice
         let signer = [Signer::from(seeds)];
  
+        log!("Creating program account");
         // Create the account
         CreateAccount {
             from: payer,
@@ -168,7 +171,7 @@ impl ProgramAccountInit for ProgramAccount {
             owner: &crate::ID,
         }
         .invoke_signed(&signer)?;
- 
+        log!("Program account initialized");
         Ok(())
     }
 }
@@ -220,13 +223,14 @@ impl AssociatedTokenAccountCheck for AssociatedTokenAccount {
         {
             return Err(PinocchioError::InvalidAddress.into());
         }
- 
+        log!("Associated Token Account check passed");
         Ok(())
     }
 }
  
 impl AssociatedTokenAccountInit for AssociatedTokenAccount {
     fn init(account: &AccountInfo, mint: &AccountInfo, payer: &AccountInfo, owner: &AccountInfo, system_program: &AccountInfo, token_program: &AccountInfo) -> ProgramResult {
+        log!("Invoking Create");
         Create {
             funding_account: payer,
             account,
@@ -238,7 +242,7 @@ impl AssociatedTokenAccountInit for AssociatedTokenAccount {
     }
  
     fn init_if_needed(account: &AccountInfo, mint: &AccountInfo, payer: &AccountInfo, owner: &AccountInfo, system_program: &AccountInfo, token_program: &AccountInfo) -> ProgramResult {
-        match Self::check(account, payer, mint, token_program) {
+        match Self::check(account, owner, mint, token_program) {
             Ok(_) => Ok(()),
             Err(_) => Self::init(account, mint, payer, owner, system_program, token_program),
         }

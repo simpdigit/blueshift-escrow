@@ -1,4 +1,5 @@
 use pinocchio::{account_info::AccountInfo, instruction::Seed, program_error::ProgramError, pubkey::find_program_address, ProgramResult};
+use pinocchio_log::log;
 use pinocchio_token::instructions::Transfer;
 
 use crate::{helpers::{AccountCheck, AssociatedTokenAccount, AssociatedTokenAccountCheck, AssociatedTokenAccountInit, MintInterface, ProgramAccount, ProgramAccountInit, SignerAccount}, Escrow};
@@ -19,10 +20,20 @@ impl<'a> TryFrom<&'a [AccountInfo]> for MakeAccounts<'a> {
   type Error = ProgramError;
  
   fn try_from(accounts: &'a [AccountInfo]) -> Result<Self, Self::Error> {
-    let [maker, escrow, mint_a, mint_b, maker_ata_a, vault, system_program, token_program, _] = accounts else {
+    log!("maker: {}", accounts[0].key());
+    log!("escrow: {}", accounts[1].key());
+    log!("mint_a: {}", accounts[2].key());
+    log!("mint_b: {}", accounts[3].key());
+    log!("maker_ata_a: {}", accounts[4].key());
+    log!("vault: {}", accounts[5].key());
+    log!("system_program: {}", accounts[6].key());
+    log!("token_program: {}", accounts[7].key());
+
+    let [maker, escrow, mint_a, mint_b, maker_ata_a, vault, system_program, token_program, _] = accounts else {  
       return Err(ProgramError::NotEnoughAccountKeys);
     };
  
+    log!("All accounts provided");
     // Basic Accounts Checks
     SignerAccount::check(maker)?;
     MintInterface::check(mint_a)?;
@@ -65,7 +76,7 @@ impl<'a> TryFrom<&'a [u8]> for MakeInstructionData {
     if amount == 0 {
       return Err(ProgramError::InvalidInstructionData);
     }
- 
+    log!("Instruction data checks passed");
     Ok(Self {
       seed,
       receive,
@@ -86,7 +97,7 @@ impl<'a> TryFrom<(&'a [u8], &'a [AccountInfo])> for Make<'a> {
   fn try_from((data, accounts): (&'a [u8], &'a [AccountInfo])) -> Result<Self, Self::Error> {
     let accounts = MakeAccounts::try_from(accounts)?;
     let instruction_data = MakeInstructionData::try_from(data)?;
- 
+    log!("All accounts and instruction data parsed");
     // Initialize the Accounts needed
     let (_, bump) = find_program_address(&[b"escrow", accounts.maker.key(), &instruction_data.seed.to_le_bytes()], &crate::ID);
  
@@ -105,9 +116,10 @@ impl<'a> TryFrom<(&'a [u8], &'a [AccountInfo])> for Make<'a> {
       &escrow_seeds,
       Escrow::LEN
     )?;
- 
+    log!("Escrow account initialized");
     // Initialize the vault
-    AssociatedTokenAccount::init(
+    
+    AssociatedTokenAccount::init_if_needed(
       accounts.vault,
       accounts.mint_a,
       accounts.maker,
@@ -115,7 +127,10 @@ impl<'a> TryFrom<(&'a [u8], &'a [AccountInfo])> for Make<'a> {
       accounts.system_program,
       accounts.token_program,
     )?;
- 
+    log!("Vault account initialized");
+
+
+    log!("All accounts initialized");
     Ok(Self {
       accounts,
       instruction_data,

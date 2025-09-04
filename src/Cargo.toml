@@ -10,7 +10,7 @@ check-cfg = [
 ]
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 path = "lib.rs"
 test = false
 
