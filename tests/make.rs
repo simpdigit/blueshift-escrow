@@ -1,5 +1,4 @@
 use {
-    crate::associated_token, 
     mollusk_svm::{
         program::keyed_account_for_system_program,
         result::{Check, ProgramResult},
@@ -14,6 +13,10 @@ use {
 };
 
 const PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("22222222222222222222222222222222222222222222");
+const ATOKEN_PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+//const TOKEN_PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+//const TOKEN_2022_PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+
 // Helper function to create a Make instruction
 fn create_make_instruction(
     maker: &Pubkey,
@@ -160,7 +163,7 @@ fn test_make_instruction_success() {
     let mut mollusk = Mollusk::default();
     mollusk.add_program(&PROGRAM_ID, "blueshift_escrow", &mollusk_svm::program::loader_keys::LOADER_V3);
     mollusk.add_program(&spl_token::ID, "../../tests/elf/token", &mollusk_svm::program::loader_keys::LOADER_V3);
-    mollusk.add_program(&associated_token::ID, "../../tests/elf/associated_token", &mollusk_svm::program::loader_keys::LOADER_V3);
+    mollusk.add_program(&ATOKEN_PROGRAM_ID, "../../tests/elf/associated_token", &mollusk_svm::program::loader_keys::LOADER_V3);
     // Token 2022 is not needed, but if you want to test with it, uncomment below
     //mollusk.add_program(&spl_token_2022::ID, "../../tests/elf/token_2022", &mollusk_svm::program::loader_keys::LOADER_V3);
     
@@ -230,7 +233,7 @@ fn test_make_instruction_zero_amount_fails() {
     let mut mollusk = Mollusk::default();
     mollusk.add_program(&PROGRAM_ID, "blueshift_escrow", &mollusk_svm::program::loader_keys::LOADER_V3);
     mollusk.add_program(&spl_token::ID, "../../tests/elf/token", &mollusk_svm::program::loader_keys::LOADER_V3);
-    mollusk.add_program(&associated_token::ID, "../../tests/elf/associated_token", &mollusk_svm::program::loader_keys::LOADER_V3);
+    mollusk.add_program(&ATOKEN_PROGRAM_ID, "../../tests/elf/associated_token", &mollusk_svm::program::loader_keys::LOADER_V3);
 
     let seed = 12345u64;
     let receive_amount = 1000u64;

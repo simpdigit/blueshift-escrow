@@ -5,6 +5,7 @@ publish = false
 
 [lib]
 path = "lib.rs"
+doctest = false
 
 [dev-dependencies]
 blueshift_escrow = { path = "../src" }

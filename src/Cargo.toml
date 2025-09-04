@@ -13,6 +13,7 @@ check-cfg = [
 crate-type = ["cdylib", "rlib"]
 path = "lib.rs"
 test = false
+doctest = false
 
 [dependencies]
 num-traits = "0.2"
