@@ -72,28 +72,43 @@ After building the program, the binary will be available at:
 target/debug/blueshift_escrow.so
 ```
 
-## Running Tests
+## Testing
 
 The project uses a workspace structure with separate test configuration. To run the tests:
 
 ```bash
-# Run tests from the root directory
+# Run all tests from the root directory
 cargo test
-
-# Or run tests specifically from the tests directory
-cd tests && cargo test
 ```
 
-**Note**: The test framework uses `mollusk-svm` for Solana program testing with all built-in programs enabled.
+**Note**: The test framework uses `mollusk-svm` for Solana program testing with all built-in programs enabled. Tests validate the Make, Take, and Refund instructions with various scenarios including success cases, error conditions, and edge cases.
 
 ## Building
 
-To build the program:
+To build the program for Solana deployment:
 
 ```bash
-# Build the program
+# Build the program using Solana's build system
 cargo build-sbf
 ```
+
+This command compiles the program into a `.so` binary optimized for the Solana runtime.
+
+## Updating Token Program Binaries
+
+The test suite requires up-to-date token program binaries. To update these binaries from mainnet-beta:
+
+```bash
+# Download latest token program binaries and update slot height
+./update-programs.sh
+```
+
+This script downloads the following programs:
+- Token Program (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA)
+- Token-2022 Program (TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb)  
+- Associated Token Program (ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL)
+
+It also updates the slot height reference in the test files to ensure compatibility with the latest mainnet state.
 
 ## Program ID
 
