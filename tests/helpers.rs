@@ -160,3 +160,79 @@ pub fn derive_escrow_pda(maker: &Pubkey, seed: u64) -> (Pubkey, u8) {
 pub fn derive_associated_token_account(owner: &Pubkey, mint: &Pubkey) -> Pubkey {
     spl_associated_token_account::get_associated_token_address(owner, mint)
 }
+
+// Helper function to create a Take instruction
+pub fn create_take_instruction(
+    taker: &Pubkey,
+    maker: &Pubkey,
+    escrow: &Pubkey,
+    mint_a: &Pubkey,
+    mint_b: &Pubkey,
+    vault: &Pubkey,
+    taker_ata_a: &Pubkey,
+    taker_ata_b: &Pubkey,
+    maker_ata_b: &Pubkey,
+) -> Instruction {
+    let instruction_data = vec![1u8]; // Take discriminator
+
+    Instruction {
+        program_id: PROGRAM_ID,
+        accounts: vec![
+            AccountMeta::new(*taker, true),               // taker (signer)
+            AccountMeta::new(*maker, false),              // maker (writable for receiving vault closure lamports)
+            AccountMeta::new(*escrow, false),             // escrow (PDA)
+            AccountMeta::new_readonly(*mint_a, false),    // mint_a
+            AccountMeta::new_readonly(*mint_b, false),    // mint_b
+            AccountMeta::new(*vault, false),              // vault (ATA)
+            AccountMeta::new(*taker_ata_a, false),        // taker_ata_a
+            AccountMeta::new(*taker_ata_b, false),        // taker_ata_b
+            AccountMeta::new(*maker_ata_b, false),        // maker_ata_b
+            AccountMeta::new_readonly(solana_system_program::id(), false), // system_program
+            AccountMeta::new_readonly(spl_token::ID, false), // token_program
+            AccountMeta::new_readonly(PROGRAM_ID, false), // additional account (required by take instruction)
+        ],
+        data: instruction_data,
+    }
+}
+
+// Helper function to create an escrow account with initialized data
+pub fn create_escrow_account(
+    seed: u64,
+    maker: &Pubkey,
+    mint_a: &Pubkey,
+    mint_b: &Pubkey,
+    receive: u64,
+    bump: u8,
+) -> Account {
+    // Calculate the size needed for Escrow struct
+    const ESCROW_SIZE: usize = 8 + 32 + 32 + 32 + 8 + 1; // u64 + 3*Pubkey + u64 + [u8;1]
+    let mut escrow_data = vec![0u8; ESCROW_SIZE];
+    
+    // Manually pack the escrow data in the correct order as defined in state.rs
+    let mut offset = 0;
+    
+    // seed: u64
+    escrow_data[offset..offset + 8].copy_from_slice(&seed.to_le_bytes());
+    offset += 8;
+    
+    // maker: Pubkey
+    escrow_data[offset..offset + 32].copy_from_slice(maker.as_ref());
+    offset += 32;
+    
+    // mint_a: Pubkey
+    escrow_data[offset..offset + 32].copy_from_slice(mint_a.as_ref());
+    offset += 32;
+    
+    // mint_b: Pubkey
+    escrow_data[offset..offset + 32].copy_from_slice(mint_b.as_ref());
+    offset += 32;
+    
+    // receive: u64
+    escrow_data[offset..offset + 8].copy_from_slice(&receive.to_le_bytes());
+    offset += 8;
+    
+    // bump: [u8; 1]
+    escrow_data[offset] = bump;
+
+    Account::create(10_000_000, escrow_data, PROGRAM_ID, false, 0)
+}

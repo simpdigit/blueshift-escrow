@@ -1,5 +1,5 @@
 use {
-    crate::helpers::*, blueshift_escrow::Escrow, mollusk_svm::{
+    crate::helpers::*, mollusk_svm::{
         program::keyed_account_for_system_program,
         result::{Check, ProgramResult}
     }, solana_account::Account, solana_instruction::{AccountMeta, Instruction}, solana_pubkey::Pubkey, solana_system_program, spl_token::solana_program::program_error::ProgramError
@@ -303,7 +303,7 @@ fn test_make_instruction_escrow_data_validation() {
         (spl_token::ID, Account::new(1_000_000, 0, &solana_pubkey::pubkey!("BPFLoaderUpgradeab1e11111111111111111111111"))),
     ];
 
-    let result = mollusk.process_and_validate_instruction(
+    let _result = mollusk.process_and_validate_instruction(
         &instruction,
         &accounts,
         &[
