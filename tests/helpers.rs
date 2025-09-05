@@ -1,15 +1,25 @@
 use {
-    solana_account::{Account, WritableAccount},
-    solana_instruction::{AccountMeta, Instruction},
-    solana_pubkey::Pubkey,
-    solana_system_program,
-    spl_token::solana_program::program_pack::Pack
+    mollusk_svm::Mollusk, solana_account::{Account, WritableAccount}, solana_instruction::{AccountMeta, Instruction}, solana_pubkey::Pubkey, solana_system_program, spl_token::solana_program::program_pack::Pack
 };
 
 pub const PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("22222222222222222222222222222222222222222222");
 pub const ATOKEN_PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 //const TOKEN_PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 //const TOKEN_2022_PROGRAM_ID: Pubkey = solana_pubkey::pubkey!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+
+
+pub fn setup_mollusk() -> Mollusk {
+    std::env::set_var("SBF_OUT_DIR", "../target/deploy");  
+    let mut mollusk = Mollusk::default();
+    mollusk.add_program(&PROGRAM_ID, "blueshift_escrow", &mollusk_svm::program::loader_keys::LOADER_V3);
+    mollusk.add_program(&spl_token::ID, "../../tests/elf/token", &mollusk_svm::program::loader_keys::LOADER_V3);
+    mollusk.add_program(&ATOKEN_PROGRAM_ID, "../../tests/elf/associated_token", &mollusk_svm::program::loader_keys::LOADER_V3);
+    // Token 2022 is not needed, but if you want to test with it, uncomment below
+    //mollusk.add_program(&spl_token_2022::ID, "../../tests/elf/token_2022", &mollusk_svm::program::loader_keys::LOADER_V3);
+    
+    mollusk
+}
+
 
 // Helper function to create a Make instruction
 pub fn create_make_instruction(

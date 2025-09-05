@@ -1,8 +1,7 @@
 use {
     mollusk_svm::{
         program::keyed_account_for_system_program,
-        result::{Check, ProgramResult},
-        Mollusk
+        result::{Check, ProgramResult}
     }, 
     solana_account::Account, 
     solana_pubkey::Pubkey, 
@@ -15,13 +14,7 @@ use {
 
 #[test]
 fn test_make_instruction_success() {
-    std::env::set_var("SBF_OUT_DIR", "../target/deploy");  
-    let mut mollusk = Mollusk::default();
-    mollusk.add_program(&PROGRAM_ID, "blueshift_escrow", &mollusk_svm::program::loader_keys::LOADER_V3);
-    mollusk.add_program(&spl_token::ID, "../../tests/elf/token", &mollusk_svm::program::loader_keys::LOADER_V3);
-    mollusk.add_program(&ATOKEN_PROGRAM_ID, "../../tests/elf/associated_token", &mollusk_svm::program::loader_keys::LOADER_V3);
-    // Token 2022 is not needed, but if you want to test with it, uncomment below
-    //mollusk.add_program(&spl_token_2022::ID, "../../tests/elf/token_2022", &mollusk_svm::program::loader_keys::LOADER_V3);
+    let mollusk = setup_mollusk();
     
     // Test parameters
     let seed = 12345u64;
@@ -59,7 +52,7 @@ fn test_make_instruction_success() {
         (mint_a, create_mint_account(&mint_authority, 9)),
         (mint_b, create_mint_account(&mint_authority, 6)),
         (maker_ata_a, create_token_account(&maker, &mint_a, 1000)), // Maker has tokens
-        (vault, create_token_account(&escrow, &mint_a, 1000)), // Maker has tokens
+        (vault, create_token_account(&escrow, &mint_a, 1000)), // Vault has tokens
         keyed_account_for_system_program(),
         (spl_token::ID, Account::new(1_000_000, 0, &solana_pubkey::pubkey!("BPFLoaderUpgradeab1e11111111111111111111111"))),
     ];
@@ -85,11 +78,7 @@ fn test_make_instruction_success() {
 
 #[test]
 fn test_make_instruction_zero_amount_fails() {
-    std::env::set_var("SBF_OUT_DIR", "../target/deploy");  
-    let mut mollusk = Mollusk::default();
-    mollusk.add_program(&PROGRAM_ID, "blueshift_escrow", &mollusk_svm::program::loader_keys::LOADER_V3);
-    mollusk.add_program(&spl_token::ID, "../../tests/elf/token", &mollusk_svm::program::loader_keys::LOADER_V3);
-    mollusk.add_program(&ATOKEN_PROGRAM_ID, "../../tests/elf/associated_token", &mollusk_svm::program::loader_keys::LOADER_V3);
+    let mollusk = setup_mollusk();
 
     let seed = 12345u64;
     let receive_amount = 1000u64;
@@ -121,8 +110,8 @@ fn test_make_instruction_zero_amount_fails() {
         (escrow, Account::new(0, 0, &PROGRAM_ID)),
         (mint_a, create_mint_account(&mint_authority, 9)),
         (mint_b, create_mint_account(&mint_authority, 6)),
-        (maker_ata_a, create_token_account(&maker, &mint_a, 1000)),
-        (vault, Account::new(0, 0, &PROGRAM_ID)),
+        (maker_ata_a, create_token_account(&maker, &mint_a, 1000)), // Maker has tokens
+        (vault, create_token_account(&escrow, &mint_a, 0)), // Vault does not have tokens
         keyed_account_for_system_program(),
         (spl_token::ID, Account::new(1_000_000, 0, &solana_pubkey::pubkey!("BPFLoaderUpgradeab1e11111111111111111111111"))),
     ];
@@ -131,18 +120,20 @@ fn test_make_instruction_zero_amount_fails() {
     mollusk.process_and_validate_instruction(
         &instruction,
         &accounts,
+        // Example error log:
+        // [2025-09-05T12:10:57.503782000Z DEBUG solana_runtime::message_processor::stable_log] Program 22222222222222222222222222222222222222222222 failed: invalid instruction data
         &[Check::program_result(ProgramResult::Failure(ProgramError::InvalidInstructionData))],
     );
 }
 
-/* 
-//#[test]
+
+#[test]
 fn test_make_instruction_insufficient_balance_fails() {
-    let mollusk = Mollusk::new(&PROGRAM_ID, "target/deploy/blueshift_escrow");
+    let mollusk = setup_mollusk();
 
     let seed = 12345u64;
     let receive_amount = 1000u64;
-    let deposit_amount = 2000u64; // More than available balance
+    let deposit_amount = 2000u64; // Invalid: The Maker only has 1000 tokens, but wants to deposit 2000, see below.
 
     let maker = Pubkey::new_unique();
     let mint_authority = Pubkey::new_unique();
@@ -165,23 +156,30 @@ fn test_make_instruction_insufficient_balance_fails() {
         deposit_amount,
     );
 
+    
     let accounts = vec![
-        (maker, Account::new(10_000_000, 0, &PROGRAM_ID)),
-        (escrow, Account::new(0, 0, &PROGRAM_ID)),
+        (maker, Account::new(10_000_000, 0, &solana_system_program::id())),
+        (escrow, Account::new(0, 0, &solana_system_program::id())),
         (mint_a, create_mint_account(&mint_authority, 9)),
         (mint_b, create_mint_account(&mint_authority, 6)),
-        (maker_ata_a, create_token_account(&maker, &mint_a, 1000)), // Only 1000 tokens
-        (vault, Account::new(0, 0, &PROGRAM_ID)),
+        (maker_ata_a, create_token_account(&maker, &mint_a, 1000)), // Invalid: The Maker only has 1000 tokens, but wants to deposit 2000.
+        (vault, create_token_account(&escrow, &mint_a, 1000)), 
+        keyed_account_for_system_program(),
+        (spl_token::ID, Account::new(1_000_000, 0, &solana_pubkey::pubkey!("BPFLoaderUpgradeab1e11111111111111111111111"))),
     ];
 
     // Should fail due to insufficient balance
     mollusk.process_and_validate_instruction(
         &instruction,
         &accounts,
-        &[Check::err(solana_instruction::InstructionError::InsufficientFunds)],
+        // Example error log:
+        // [2025-09-05T12:07:32.562774000Z DEBUG solana_runtime::message_processor::stable_log] Program log: Error: insufficient funds
+        &[Check::program_result(ProgramResult::Failure(ProgramError::Custom(1)))],
+        
     );
 }
 
+/* 
 //#[test]
 fn test_make_instruction_invalid_instruction_data() {
     let mollusk = Mollusk::new(&PROGRAM_ID, "target/deploy/blueshift_escrow");
